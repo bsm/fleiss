@@ -1,0 +1,10 @@
+inherit_from:
+  - https://storage.googleapis.com/bsm-misc/rubocop.yml
+
+Security/Open:
+  Exclude:
+    - "core/lib/bfs/bucket/abstract.rb"
+    - "core/lib/bfs/blob.rb"
+Metrics/BlockLength:
+  Exclude:
+    - "**/spec/**/*"
