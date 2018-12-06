@@ -68,19 +68,23 @@ module Fleiss
         # @param [String] owner
         # @return [Boolean] true if job was started.
         def start(owner, now: Time.zone.now)
-          self.class.pending(now)
-              .where(id: id)
-              .update_all(started_at: now, owner: owner) == 1
+          with_lock do
+            self.class.pending(now)
+                .where(id: id)
+                .update_all(started_at: now, owner: owner) == 1
+          end
         end
 
         # Marks a job as finished.
         # @param [String] owner
         # @return [Boolean] true if successful.
         def finish(owner, now: Time.zone.now)
-          self.class
-              .in_progress(owner)
-              .where(id: id)
-              .update_all(finished_at: now) == 1
+          with_lock do
+            self.class
+                .in_progress(owner)
+                .where(id: id)
+                .update_all(finished_at: now) == 1
+          end
         end
       end
     end

@@ -1,5 +1,5 @@
 inherit_from:
-  - https://storage.googleapis.com/bsm-misc/rubocop.yml
+  - https://bitbucket.org/bsm/misc/raw/master/rubocop/default.yml
 
 Security/Open:
   Exclude:

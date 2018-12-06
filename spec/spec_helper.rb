@@ -12,12 +12,11 @@ ActiveJob::Base.logger = Logger.new(nil)
 
 Time.zone_default = Time.find_zone!('UTC')
 
-ActiveRecord::Base.configurations['test'] = {
-  'adapter'  => 'sqlite3',
-  'database' => Tempfile.new(['fleiss-test', '.sqlite3']).path,
-  'pool'     => 20,
-}
+database_url = ENV['DATABASE_URL'] || "sqlite3://#{Tempfile.new(['fleiss-test', '.sqlite3']).path}"
+ActiveRecord::Base.configurations['test'] = { 'url' => database_url, 'pool' => 20 }
+
 ActiveRecord::Base.establish_connection :test
+ActiveRecord::Base.connection.drop_table('fleiss_jobs', if_exists: true)
 ActiveRecord::Migration.suppress_messages do
   Fleiss::Backend::ActiveRecord::Migration.migrate(:up)
 end

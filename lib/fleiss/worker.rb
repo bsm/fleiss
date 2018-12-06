@@ -57,29 +57,22 @@ class Fleiss::Worker
   private
 
   def run_cycle
-    jobs = next_batch
-    while !@stopped && capacity.positive? && !jobs.empty?
-      job = jobs.shift
+    capacity = @pool.max_length - @pool.scheduled_task_count + @pool.completed_task_count
+    return unless capacity.positive?
+
+    batch = Fleiss.backend
+                  .in_queue(queues)
+                  .pending
+                  .limit(capacity)
+                  .to_a
+
+    batch.each do |job|
+      break if @stopped
+
       @pool.post { perform(job) }
     end
   rescue StandardError => e
     handle_exception e, 'running cycle'
-  end
-
-  def capacity
-    num = @pool.max_length - @pool.scheduled_task_count + @pool.completed_task_count
-    num.positive? ? num : 0
-  end
-
-  def next_batch
-    slots = capacity
-    return [] if slots.zero?
-
-    Fleiss.backend
-          .in_queue(queues)
-          .pending
-          .limit(slots)
-          .to_a
   end
 
   def perform(job)

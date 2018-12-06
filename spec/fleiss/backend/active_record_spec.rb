@@ -95,6 +95,18 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     expect(rec.started_at).to be_within(2.seconds).of(Time.zone.now)
   end
 
+  it 'should lock atomically' do
+    24.times do
+      TestJob.perform_later
+    end
+    counts = (1..4).map do |n|
+      Thread.new do
+        described_class.pending.to_a.count {|j| j.start "owner-#{n}" }
+      end
+    end.map(&:value)
+    expect(counts.sum).to eq(24)
+  end
+
   it 'should finish' do
     job = TestJob.perform_later
     rec = retrieve(job)
