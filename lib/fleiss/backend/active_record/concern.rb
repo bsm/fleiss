@@ -68,7 +68,7 @@ module Fleiss
         # @param [String] owner
         # @return [Boolean] true if job was started.
         def start(owner, now: Time.zone.now)
-          with_lock do
+          with_isolation do
             self.class.pending(now)
                 .where(id: id)
                 .update_all(started_at: now, owner: owner) == 1
@@ -79,12 +79,22 @@ module Fleiss
         # @param [String] owner
         # @return [Boolean] true if successful.
         def finish(owner, now: Time.zone.now)
-          with_lock do
+          with_isolation do
             self.class
                 .in_progress(owner)
                 .where(id: id)
                 .update_all(finished_at: now) == 1
           end
+        end
+
+        private
+
+        def with_isolation(&block)
+          args = []
+          args.push(isolation: :repeatable_read) if self.class.connection.supports_transaction_isolation?
+          transaction(*args, &block)
+        rescue ::ActiveRecord::SerializationFailure
+          false
         end
       end
     end
