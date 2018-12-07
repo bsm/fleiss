@@ -35,12 +35,13 @@ RSpec.describe Fleiss::Worker do
 
     # check what's been performed
     expect(TestJob.performed.size).to eq(24)
+    expect(Fleiss.backend.finished.count).to eq(24)
     expect(TestJob.performed).to match_array(0..23)
   end
 
   it 'should handle failing jobs' do
     TestJob.perform_later('raise')
     wait_for { Fleiss.backend.not_finished.count.zero? }
-    expect(Fleiss.backend.count).to eq(1)
+    expect(Fleiss.backend.finished.count).to eq(1)
   end
 end
