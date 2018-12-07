@@ -13,12 +13,11 @@ RSpec.describe Fleiss::Worker do
   end
 
   after do
-    subject.shutdown
-    subject.wait
+    runner.kill
   end
 
   def wait_for
-    200.times do
+    100.times do
       break if yield
 
       sleep(0.1)
@@ -26,17 +25,17 @@ RSpec.describe Fleiss::Worker do
     expect(yield).to be_truthy
   end
 
-  it 'should run/process/shutdown' do
-    # seed 50 jobs
-    50.times {|n| TestJob.perform_later(n) }
-    wait_for { Fleiss.backend.not_finished.count > 0 }
+  it 'should run' do
+    # seed 24 jobs
+    24.times {|n| TestJob.perform_later(n) }
+    wait_for { Fleiss.backend.not_finished.count.positive? }
 
     # ensure runner processes them all
     wait_for { Fleiss.backend.not_finished.count.zero? }
 
     # check what's been performed
-    expect(TestJob.performed.size).to eq(50)
-    expect(TestJob.performed).to match_array(0..49)
+    expect(TestJob.performed.size).to eq(24)
+    expect(TestJob.performed).to match_array(0..23)
   end
 
   it 'should handle failing jobs' do

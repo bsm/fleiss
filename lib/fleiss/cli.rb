@@ -42,26 +42,15 @@ module Fleiss
     end
 
     def run!
-      return if @worker
-
       $LOAD_PATH.concat opts[:include]
       opts[:require].each {|n| require n }
       require 'fleiss/worker'
 
-      Signal.trap('TERM') { shutdown }
-      Signal.trap('INT')  { shutdown }
-
-      @worker = Fleiss::Worker.new \
+      Fleiss::Worker.run \
         queues: opts[:queues],
         concurrency: opts[:concurrency],
         wait_time: opts[:wait_time],
         logger: Logger.new(opts[:logfile])
-      @worker.run
-      @worker.wait
-    end
-
-    def shutdown
-      @worker.shutdown if @worker
     end
 
     def parser # rubocop:disable Metrics/MethodLength

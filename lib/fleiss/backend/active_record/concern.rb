@@ -29,15 +29,6 @@ module Fleiss
             started.not_finished.where(owner: owner)
           end
 
-          # Reschedules jobs to run again.
-          def reschedule_all(at=Time.zone.now)
-            update_all(
-              started_at: nil,
-              owner: nil,
-              scheduled_at: at,
-            )
-          end
-
           # @param [ActiveJob::Base] job the job instance
           # @option [Time] :scheduled_at schedule job at
           def enqueue(job, scheduled_at: nil)
@@ -68,23 +59,47 @@ module Fleiss
         # @param [String] owner
         # @return [Boolean] true if job was started.
         def start(owner, now: Time.zone.now)
-          with_lock do
+          with_isolation do
             self.class.pending(now)
                 .where(id: id)
-                .update_all(started_at: now, owner: owner) == 1
-          end
+                .update_all(started_at: now, owner: owner)
+          end == 1
+        rescue ::ActiveRecord::SerializationFailure
+          false
         end
 
         # Marks a job as finished.
         # @param [String] owner
         # @return [Boolean] true if successful.
         def finish(owner, now: Time.zone.now)
-          with_lock do
+          with_isolation do
             self.class
                 .in_progress(owner)
                 .where(id: id)
-                .update_all(finished_at: now) == 1
-          end
+                .update_all(finished_at: now)
+          end == 1
+        rescue ::ActiveRecord::SerializationFailure
+          false
+        end
+
+        # Reschedules the job to run again.
+        def reschedule(owner, now: Time.zone.now)
+          with_isolation do
+            self.class
+                .in_progress(owner)
+                .where(id: id)
+                .update_all(started_at: nil, owner: nil, scheduled_at: now)
+          end == 1
+        rescue ::ActiveRecord::SerializationFailure
+          false
+        end
+
+        private
+
+        def with_isolation(&block)
+          return yield unless self.class.connection.supports_transaction_isolation?
+
+          self.class.transaction(isolation: :repeatable_read, &block)
         end
       end
     end
