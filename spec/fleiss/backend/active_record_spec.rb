@@ -46,13 +46,6 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     expect(rec.job_id.size).to eq(36)
   end
 
-  it 'should reschedule' do
-    job = TestJob.perform_later
-    described_class.reschedule_all(1.hour.from_now)
-    rec = retrieve(job)
-    expect(rec.scheduled_at).to be_within(2.seconds).of(1.hour.from_now)
-  end
-
   it 'should scope pending' do
     j1 = TestJob.perform_later
     expect(retrieve(j1).start('owner')).to be_truthy
@@ -117,5 +110,17 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     expect(rec.reload.owner).to eq('owner')
     expect(rec.started_at).to be_within(2.seconds).of(Time.zone.now)
     expect(rec.finished_at).to be_within(2.seconds).of(Time.zone.now)
+  end
+
+  it 'should reschedule' do
+    job = TestJob.perform_later
+    rec = retrieve(job)
+    expect(rec.reschedule('owner')).to be_falsey
+    expect(rec.start('owner')).to be_truthy
+    expect(rec.reschedule('other')).to be_falsey
+    expect(rec.reschedule('owner')).to be_truthy
+    expect(rec.reload.owner).to be_nil
+    expect(rec.started_at).to be_nil
+    expect(rec.scheduled_at).to be_within(2.seconds).of(Time.zone.now)
   end
 end

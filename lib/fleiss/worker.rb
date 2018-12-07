@@ -7,6 +7,11 @@ require 'securerandom'
 class Fleiss::Worker
   attr_reader :queues, :uuid, :wait_time, :logger
 
+  # Shortcut for new(*args).run
+  def self.run(*args)
+    new(*args).run
+  end
+
   # Init a new worker instance
   # @param [ConnectionPool] disque client connection pool
   # @param [Hash] options
@@ -27,36 +32,20 @@ class Fleiss::Worker
     logger.info "Worker #{uuid} starting - queues: #{queues.inspect}, concurrency: #{@pool.max_length}"
     loop do
       run_cycle
-      break if @stopped
-
       sleep @wait_time
     end
-    logger.info "Worker #{uuid} shutting down"
-  end
-
-  # Blocks until worker until it's stopped.
-  def wait
+  rescue SignalException => e
+    logger.info "Worker #{uuid} received #{e.message}. Shutting down..."
+  ensure
     @pool.shutdown
-    @pool.wait_for_termination(1)
-
-    Fleiss.backend
-          .in_queue(queues)
-          .in_progress(uuid)
-          .reschedule_all(10.seconds.from_now)
     @pool.wait_for_termination
-    logger.info "Worker #{uuid} shutdown complete"
-  rescue StandardError => e
-    handle_exception e, 'shutdown'
-  end
-
-  # Initiates the shutdown process
-  def shutdown
-    @stopped = true
   end
 
   private
 
   def run_cycle
+    return if @pool.shuttingdown?
+
     capacity = @pool.max_length - @pool.scheduled_task_count + @pool.completed_task_count
     return unless capacity.positive?
 
@@ -67,8 +56,6 @@ class Fleiss::Worker
                   .to_a
 
     batch.each do |job|
-      break if @stopped
-
       @pool.post { perform(job) }
     end
   rescue StandardError => e
@@ -76,16 +63,23 @@ class Fleiss::Worker
   end
 
   def perform(job)
-    return unless job.start(uuid)
+    thread_id = Thread.current.object_id.to_s(16).reverse
+    owner     = "#{uuid}/#{thread_id}"
+    return unless job.start(owner)
 
-    thread_id = Thread.current.object_id.to_s(36)
-    logger.info { "Worker #{uuid} execute job ##{job.id} by thread #{thread_id}" }
-
-    ActiveJob::Base.execute job.job_data
+    logger.info { "Worker #{uuid} execute job ##{job.id} (by thread #{thread_id})" }
+    finished = false
+    begin
+      ActiveJob::Base.execute job.job_data
+      finished = true
+    rescue StandardError
+      finished = true
+      raise
+    ensure
+      finished ? job.finish(owner) : job.reschedule(owner)
+    end
   rescue StandardError => e
     handle_exception e, "processing job ##{job.id} (by thread #{thread_id})"
-  ensure
-    job.finish(uuid)
   end
 
   def handle_exception(err, intro)
