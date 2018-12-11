@@ -46,11 +46,14 @@ module Fleiss
       opts[:require].each {|n| require n }
       require 'fleiss/worker'
 
+      logdev = opts[:logfile]
+      logdev.sync = true if logdev.respond_to?(:sync=)
+
       Fleiss::Worker.run \
         queues: opts[:queues],
         concurrency: opts[:concurrency],
         wait_time: opts[:wait_time],
-        logger: Logger.new(opts[:logfile])
+        logger: Logger.new(logdev)
     end
 
     def parser # rubocop:disable Metrics/MethodLength
