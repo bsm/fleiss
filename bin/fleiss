@@ -5,6 +5,9 @@ $LOAD_PATH.push(lib_dir) unless $LOAD_PATH.include?(lib_dir)
 
 require 'fleiss/cli'
 
+STDOUT.sync = true
+STDERR.sync = true
+
 cli = Fleiss::CLI.instance
 begin
   cli.parse!

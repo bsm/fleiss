@@ -1,3 +1,7 @@
+require 'active_job'
+require 'active_job/queue_adapters/fleiss_adapter'
+require 'fleiss/backend'
+
 module Fleiss
   DEFAULT_QUEUE = 'default'.freeze
 
@@ -5,5 +9,3 @@ module Fleiss
     self::Backend::ActiveRecord
   end
 end
-
-require 'fleiss/backend'

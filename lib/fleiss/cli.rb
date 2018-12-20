@@ -2,7 +2,6 @@ require 'singleton'
 require 'optparse'
 require 'yaml'
 require 'erb'
-require 'logger'
 
 module Fleiss
   class CLI
@@ -15,7 +14,6 @@ module Fleiss
       require: [],
       concurrency: 10,
       wait_time: 1.0,
-      logfile: STDOUT,
     }.freeze
 
     attr_reader :opts
@@ -46,14 +44,11 @@ module Fleiss
       opts[:require].each {|n| require n }
       require 'fleiss/worker'
 
-      logdev = opts[:logfile]
-      logdev.sync = true if logdev.respond_to?(:sync=)
-
+      ActiveJob::Base.logger = ActiveSupport::TaggedLogging.new(ActiveSupport::Logger.new(opts[:logfile])) if opts[:logfile]
       Fleiss::Worker.run \
         queues: opts[:queues],
         concurrency: opts[:concurrency],
-        wait_time: opts[:wait_time],
-        logger: Logger.new(logdev)
+        wait_time: opts[:wait_time]
     end
 
     def parser # rubocop:disable Metrics/MethodLength

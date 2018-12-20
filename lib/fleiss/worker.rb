@@ -1,11 +1,10 @@
 require 'fleiss'
 require 'concurrent/executor/fixed_thread_pool'
 require 'concurrent/atomic/atomic_fixnum'
-require 'logger'
 require 'securerandom'
 
 class Fleiss::Worker
-  attr_reader :queues, :uuid, :wait_time, :logger
+  attr_reader :queues, :uuid, :wait_time
 
   # Shortcut for new(*args).run
   def self.run(*args)
@@ -18,30 +17,37 @@ class Fleiss::Worker
   # @option [Array<String>] :queues queues to watch. Default: ["default"]
   # @option [Integer] :concurrency the number of concurrent pool. Default: 10
   # @option [Numeric] :wait_time maximum time (in seconds) to wait for jobs when retrieving next batch. Default: 1s.
-  # @option [Logger] :logger optional logger.
-  def initialize(queues: [Fleiss::DEFAULT_QUEUE], concurrency: 10, wait_time: 1, logger: nil)
+  def initialize(queues: [Fleiss::DEFAULT_QUEUE], concurrency: 10, wait_time: 1)
     @uuid      = SecureRandom.uuid
     @queues    = Array(queues)
     @pool      = Concurrent::FixedThreadPool.new(concurrency, fallback_policy: :discard)
     @wait_time = wait_time
-    @logger    = logger || Logger.new(nil)
   end
 
   # Run starts the worker
   def run
-    logger.info "Worker #{uuid} starting - queues: #{queues.inspect}, concurrency: #{@pool.max_length}"
+    log(:info) { "Worker #{uuid} starting - queues: #{queues.inspect}, concurrency: #{@pool.max_length}" }
     loop do
       run_cycle
       sleep @wait_time
     end
   rescue SignalException => e
-    logger.info "Worker #{uuid} received #{e.message}. Shutting down..."
+    log(:info) { "Worker #{uuid} received #{e.message}. Shutting down..." }
   ensure
     @pool.shutdown
     @pool.wait_for_termination
   end
 
   private
+
+  def log(severity, &block)
+    logger = ActiveJob::Base.logger
+    if logger.respond_to?(:tagged)
+      logger.tagged('Fleiss') { logger.send(severity, &block) }
+    else
+      logger.send(severity, &block)
+    end
+  end
 
   def run_cycle
     return if @pool.shuttingdown?
@@ -67,7 +73,7 @@ class Fleiss::Worker
     owner     = "#{uuid}/#{thread_id}"
     return unless job.start(owner)
 
-    logger.info { "Worker #{uuid} execute job ##{job.id} (by thread #{thread_id})" }
+    log(:info) { "Worker #{uuid} execute job ##{job.id} (by thread #{thread_id})" }
     finished = false
     begin
       ActiveJob::Base.execute job.job_data
@@ -83,12 +89,12 @@ class Fleiss::Worker
   end
 
   def handle_exception(err, intro)
-    lines = [
-      "Worker #{uuid} error on #{intro}:",
-      "#{err.class.name}: #{err.message}",
-      err.backtrace,
-    ].compact.flatten
-
-    logger.error lines.join("\n")
+    log(:error) do
+      [
+        "Worker #{uuid} error on #{intro}:",
+        "#{err.class.name}: #{err.message}",
+        err.backtrace,
+      ].compact.flatten.join("\n")
+    end
   end
 end
