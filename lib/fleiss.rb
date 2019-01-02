@@ -6,6 +6,10 @@ module Fleiss
   DEFAULT_QUEUE = 'default'.freeze
 
   def self.backend
-    self::Backend::ActiveRecord
+    @backend ||= self::Backend::ActiveRecord
+  end
+
+  def self.backend=(value)
+    @backend = value
   end
 end
