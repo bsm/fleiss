@@ -13,12 +13,12 @@ begin
   cli.parse!
   cli.run!
 rescue ArgumentError => e
-  STDERR.puts " ! #{e.message}\n"
+  warn " ! #{e.message}\n"
   STDERR.puts
-  STDERR.puts cli.parser
+  warn cli.parser
   exit 1
 rescue StandardError => e
-  STDERR.puts e.message
-  STDERR.puts e.backtrace.join("\n")
+  warn e.message
+  warn e.backtrace.join("\n")
   exit 1
 end

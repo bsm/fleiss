@@ -1,6 +1,5 @@
 require 'fleiss'
-require 'concurrent/executor/fixed_thread_pool'
-require 'concurrent/atomic/atomic_fixnum'
+require 'fleiss/executor'
 require 'securerandom'
 
 class Fleiss::Worker
@@ -20,13 +19,13 @@ class Fleiss::Worker
   def initialize(queues: [Fleiss::DEFAULT_QUEUE], concurrency: 10, wait_time: 1)
     @uuid      = SecureRandom.uuid
     @queues    = Array(queues)
-    @pool      = Concurrent::FixedThreadPool.new(concurrency, fallback_policy: :discard)
+    @pool      = Fleiss::Executor.new(max_size: concurrency)
     @wait_time = wait_time
   end
 
   # Run starts the worker
   def run
-    log(:info) { "Worker #{uuid} starting - queues: #{queues.inspect}, concurrency: #{@pool.max_length}" }
+    log(:info) { "Worker #{uuid} starting - queues: #{queues.inspect}, concurrency: #{@pool.max_size}" }
     loop do
       run_cycle
       sleep @wait_time
@@ -50,19 +49,21 @@ class Fleiss::Worker
   end
 
   def run_cycle
-    return if @pool.shuttingdown?
+    return unless @pool.running?
 
-    capacity = @pool.max_length - @pool.scheduled_task_count + @pool.completed_task_count
-    return unless capacity.positive?
+    limit = @pool.capacity
+    return unless limit.positive?
 
     batch = Fleiss.backend
                   .in_queue(queues)
                   .pending
-                  .limit(capacity)
+                  .limit(limit)
                   .to_a
 
     batch.each do |job|
-      @pool.post { perform(job) }
+      @pool.post do
+        Fleiss.backend.wrap_perform { perform(job) }
+      end
     end
   rescue StandardError => e
     handle_exception e, 'running cycle'
