@@ -15,6 +15,10 @@ module Fleiss
         end
 
         module ClassMethods
+          def wrap_perform(&block)
+            connection_pool.with_connection(&block)
+          end
+
           # @return [ActiveRecord::Relation] pending scope
           def pending(now=Time.zone.now)
             not_finished

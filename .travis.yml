@@ -1,8 +1,10 @@
 language: ruby
 rvm:
+  - 2.6
   - 2.5
   - 2.4
 before_install:
+  - gem install bundler
   - mysql -e 'CREATE DATABASE fleiss_test;'
   - psql -c 'CREATE DATABASE fleiss_test;' -U postgres
 services:

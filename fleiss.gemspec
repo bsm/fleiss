@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name          = 'fleiss'
-  s.version       = '0.2.1'
+  s.version       = '0.3.0'
   s.authors       = ['Black Square Media Ltd']
   s.email         = ['info@blacksquaremedia.com']
   s.summary       = %(Minimialist background jobs backed by ActiveJob and ActiveRecord.)
@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.files         = `git ls-files -z`.split("\x0").reject {|f| f.match(%r{^spec/}) }
   s.test_files    = `git ls-files -z -- spec/*`.split("\x0")
   s.require_paths = ['lib']
-  s.required_ruby_version = '>= 2.2'
+  s.required_ruby_version = '>= 2.4'
 
   s.add_dependency 'activejob', '>= 5.0'
   s.add_dependency 'activerecord', '>= 5.0'
@@ -24,5 +24,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'rubocop'
-  s.add_development_dependency 'sqlite3'
+  s.add_development_dependency 'sqlite3', '~> 1.3.6'
 end
