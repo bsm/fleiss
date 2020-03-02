@@ -22,7 +22,7 @@ module Fleiss
       @opts = DEFAULT_OPTIONS.dup
     end
 
-    def parse!(argv=ARGV)
+    def parse!(argv = ARGV)
       parser.parse!(argv)
 
       # Check config file
