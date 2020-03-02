@@ -8,10 +8,10 @@ module Fleiss
           scope :in_queue, ->(qs) { where(queue_name: Array.wrap(qs)) }
           scope :finished, -> { where.not(finished_at: nil) }
           scope :not_finished, -> { where(finished_at: nil) }
-          scope :not_expired,  ->(now=Time.zone.now) { where(arel_table[:expires_at].eq(nil).or(arel_table[:expires_at].gt(now))) }
+          scope :not_expired,  ->(now = Time.zone.now) { where(arel_table[:expires_at].eq(nil).or(arel_table[:expires_at].gt(now))) }
           scope :started,      -> { where(arel_table[:started_at].not_eq(nil)) }
           scope :not_started,  -> { where(arel_table[:started_at].eq(nil)) }
-          scope :scheduled,    ->(now=Time.zone.now) { where(arel_table[:scheduled_at].gt(now)) }
+          scope :scheduled,    ->(now = Time.zone.now) { where(arel_table[:scheduled_at].gt(now)) }
         end
 
         module ClassMethods
@@ -20,7 +20,7 @@ module Fleiss
           end
 
           # @return [ActiveRecord::Relation] pending scope
-          def pending(now=Time.zone.now)
+          def pending(now = Time.zone.now)
             not_finished
               .not_expired(now)
               .not_started

@@ -15,7 +15,7 @@ class Fleiss::Executor < Concurrent::SimpleExecutorService
 
   private
 
-  def ns_initialize(opts={})
+  def ns_initialize(opts = {})
     super()
     @max_size = opts.fetch(:max_size, 1).to_i
   end

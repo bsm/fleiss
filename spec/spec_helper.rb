@@ -5,15 +5,19 @@ require 'fleiss'
 require 'fleiss/backend/active_record/migration'
 require 'active_job'
 require 'active_job/queue_adapters/fleiss_adapter'
-require 'tempfile'
+require 'fileutils'
 
 ActiveJob::Base.queue_adapter = :fleiss
 ActiveJob::Base.logger = Logger.new(nil)
 
 Time.zone_default = Time.find_zone!('UTC')
 
-database_url = ENV['DATABASE_URL'] || "sqlite3://#{Tempfile.new(['fleiss-test', '.sqlite3']).path}"
-ActiveRecord::Base.configurations['test'] = { 'url' => database_url, 'pool' => 20 }
+tmpdir = File.expand_path('./tmp', __dir__)
+FileUtils.rm_rf tmpdir
+FileUtils.mkdir_p tmpdir
+
+database_url = ENV['DATABASE_URL'] || "sqlite3://#{tmpdir}/fleiss-test.sqlite3"
+ActiveRecord::Base.configurations = { 'test' => { 'url' => database_url, 'pool' => 20 } }
 
 ActiveRecord::Base.establish_connection :test
 ActiveRecord::Base.connection.drop_table('fleiss_jobs', if_exists: true)
@@ -32,7 +36,7 @@ class TestJob < ActiveJob::Base
     72.hours
   end
 
-  def perform(msg=nil)
+  def perform(msg = nil)
     raise 'Failing' if msg == 'raise'
 
     self.class.performed.push(msg)
