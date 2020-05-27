@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name          = 'fleiss'
-  s.version       = '0.3.1'
+  s.version       = '0.4.0'
   s.authors       = ['Black Square Media Ltd']
   s.email         = ['info@blacksquaremedia.com']
   s.summary       = %(Minimialist background jobs backed by ActiveJob and ActiveRecord.)
@@ -12,10 +12,10 @@ Gem::Specification.new do |s|
   s.files         = `git ls-files -z`.split("\x0").reject {|f| f.match(%r{^spec/}) }
   s.test_files    = `git ls-files -z -- spec/*`.split("\x0")
   s.require_paths = ['lib']
-  s.required_ruby_version = '>= 2.5'
+  s.required_ruby_version = '>= 2.6'
 
-  s.add_dependency 'activejob', '>= 5.0'
-  s.add_dependency 'activerecord', '>= 5.0'
+  s.add_dependency 'activejob', '>= 6.0'
+  s.add_dependency 'activerecord', '>= 6.0'
   s.add_dependency 'concurrent-ruby'
 
   s.add_development_dependency 'bundler'
