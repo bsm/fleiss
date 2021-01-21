@@ -25,7 +25,7 @@ RSpec.describe Fleiss::Worker do
     expect(yield).to be_truthy
   end
 
-  it 'should run' do
+  it 'runs' do
     # seed 24 jobs
     24.times {|n| TestJob.perform_later(n) }
     wait_for { Fleiss.backend.not_finished.count.positive? }
@@ -39,7 +39,7 @@ RSpec.describe Fleiss::Worker do
     expect(TestJob.performed).to match_array(0..23)
   end
 
-  it 'should handle failing jobs' do
+  it 'handles failing jobs' do
     TestJob.perform_later('raise')
     wait_for { Fleiss.backend.not_finished.count.zero? }
     expect(Fleiss.backend.finished.count).to eq(1)

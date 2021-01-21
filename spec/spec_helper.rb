@@ -44,7 +44,7 @@ class TestJob < ActiveJob::Base
 end
 
 RSpec.configure do |c|
-  c.after :each do
+  c.after do
     TestJob.performed.clear
     Fleiss.backend.delete_all
   end
