@@ -5,7 +5,7 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     described_class.find(job.provider_job_id)
   end
 
-  it 'should persist jobs' do
+  it 'persists jobs' do
     job = TestJob.perform_later
     rec = retrieve(job)
 
@@ -28,25 +28,25 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     )
   end
 
-  it 'should enqueue with delay' do
+  it 'enqueues with delay' do
     job = TestJob.set(wait: 1.day).perform_later
     rec = retrieve(job)
     expect(rec.scheduled_at).to be_within(2.seconds).of(1.day.from_now)
   end
 
-  it 'should enqueue with priority' do
+  it 'enqueues with priority' do
     job = TestJob.set(priority: 8).perform_later
     rec = retrieve(job)
     expect(rec.priority).to eq(8)
   end
 
-  it 'should expose active job ID' do
+  it 'exposes active job ID' do
     job = TestJob.perform_later
     rec = retrieve(job)
     expect(rec.job_id.size).to eq(36)
   end
 
-  it 'should scope pending' do
+  it 'scopes pending' do
     j1 = TestJob.perform_later
     expect(retrieve(j1).start('owner')).to be_truthy
     expect(retrieve(j1).finish('owner')).to be_truthy
@@ -58,7 +58,7 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     expect(described_class.pending.ids).to eq [j4.provider_job_id, j2.provider_job_id]
   end
 
-  it 'should scope in_progress' do
+  it 'scopes in_progress' do
     _j1 = TestJob.perform_later
     j2 = TestJob.perform_later
     expect(retrieve(j2).start('owner')).to be_truthy
@@ -72,14 +72,14 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     expect(described_class.in_progress('owner').ids).to eq [j2.provider_job_id]
   end
 
-  it 'should scope by queue' do
+  it 'scopes by queue' do
     j1 = TestJob.perform_later
     j2 = TestJob.set(queue: 'other').perform_later
     expect(described_class.in_queue('test-queue').ids).to eq [j1.provider_job_id]
     expect(described_class.in_queue('other').ids).to eq [j2.provider_job_id]
   end
 
-  it 'should start' do
+  it 'starts' do
     job = TestJob.perform_later
     rec = retrieve(job)
     expect(rec.start('owner')).to be_truthy
@@ -88,7 +88,7 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     expect(rec.started_at).to be_within(2.seconds).of(Time.zone.now)
   end
 
-  it 'should lock atomically' do
+  it 'locks atomically' do
     24.times do
       TestJob.perform_later
     end
@@ -100,7 +100,7 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     expect(counts.sum).to eq(24)
   end
 
-  it 'should finish' do
+  it 'finishes' do
     job = TestJob.perform_later
     rec = retrieve(job)
     expect(rec.finish('owner')).to be_falsey
@@ -112,7 +112,7 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     expect(rec.finished_at).to be_within(2.seconds).of(Time.zone.now)
   end
 
-  it 'should reschedule' do
+  it 'reschedules' do
     job = TestJob.perform_later
     rec = retrieve(job)
     expect(rec.reschedule('owner')).to be_falsey

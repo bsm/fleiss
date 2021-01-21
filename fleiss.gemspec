@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name          = 'fleiss'
-  s.version       = '0.4.0'
+  s.version       = '0.4.1'
   s.authors       = ['Black Square Media Ltd']
   s.email         = ['info@blacksquaremedia.com']
   s.summary       = %(Minimialist background jobs backed by ActiveJob and ActiveRecord.)
@@ -23,6 +23,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'pg'
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rspec'
-  s.add_development_dependency 'rubocop'
+  s.add_development_dependency 'rubocop-bsm'
   s.add_development_dependency 'sqlite3'
 end

@@ -8,7 +8,9 @@ module Fleiss
           scope :in_queue, ->(qs) { where(queue_name: Array.wrap(qs)) }
           scope :finished, -> { where.not(finished_at: nil) }
           scope :not_finished, -> { where(finished_at: nil) }
-          scope :not_expired,  ->(now = Time.zone.now) { where(arel_table[:expires_at].eq(nil).or(arel_table[:expires_at].gt(now))) }
+          scope :not_expired,  lambda {|now = Time.zone.now|
+                                 where(arel_table[:expires_at].eq(nil).or(arel_table[:expires_at].gt(now)))
+                               }
           scope :started,      -> { where(arel_table[:started_at].not_eq(nil)) }
           scope :not_started,  -> { where(arel_table[:started_at].eq(nil)) }
           scope :scheduled,    ->(now = Time.zone.now) { where(arel_table[:scheduled_at].gt(now)) }
@@ -102,9 +104,12 @@ module Fleiss
         private
 
         def with_isolation(&block)
-          return yield unless self.class.connection.supports_transaction_isolation?
-
-          self.class.transaction(isolation: :repeatable_read, &block)
+          conn = self.class.connection
+          if conn.supports_transaction_isolation? && conn.adapter_name != 'SQLite'
+            self.class.transaction(isolation: :repeatable_read, &block)
+          else
+            yield
+          end
         end
       end
     end

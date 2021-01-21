@@ -3,7 +3,7 @@ require 'fleiss/backend/active_record'
 module Fleiss
   module Backend
     class ActiveRecord
-      class Migration < ::ActiveRecord::Migration[5.0]
+      class Migration < ::ActiveRecord::Migration[6.0]
         def change
           create_table :fleiss_jobs do |t|
             t.string :queue_name, limit: 50, null: false

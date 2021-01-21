@@ -5,8 +5,8 @@ $LOAD_PATH.push(lib_dir) unless $LOAD_PATH.include?(lib_dir)
 
 require 'fleiss/cli'
 
-STDOUT.sync = true
-STDERR.sync = true
+$stdout.sync = true
+$stderr.sync = true
 
 cli = Fleiss::CLI.instance
 begin
@@ -14,7 +14,7 @@ begin
   cli.run!
 rescue ArgumentError => e
   warn " ! #{e.message}\n"
-  STDERR.puts
+  $stderr.puts
   warn cli.parser
   exit 1
 rescue StandardError => e
