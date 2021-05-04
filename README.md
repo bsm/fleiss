@@ -1,6 +1,6 @@
 # Fleiss
 
-[![Build Status](https://travis-ci.org/bsm/fleiss.png?branch=master)](https://travis-ci.org/bsm/fleiss)
+[![Test](https://github.com/bsm/fleiss/actions/workflows/test.yml/badge.svg)](https://github.com/bsm/fleiss/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Minimialist background jobs backed by ActiveJob and ActiveRecord.
