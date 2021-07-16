@@ -19,6 +19,9 @@ module Fleiss
         module ClassMethods
           def wrap_perform(&block)
             connection_pool.with_connection(&block)
+          rescue ::ActiveRecord::StatementInvalid
+            ::ActiveRecord::Base.clear_active_connections!
+            raise
           end
 
           # @return [ActiveRecord::Relation] pending scope
