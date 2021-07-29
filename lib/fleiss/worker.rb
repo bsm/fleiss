@@ -5,9 +5,9 @@ require 'securerandom'
 class Fleiss::Worker
   attr_reader :queues, :uuid, :wait_time
 
-  # Shortcut for new(*args).run
-  def self.run(*args)
-    new(*args).run
+  # Shortcut for new(**opts).run
+  def self.run(**opts)
+    new(**opts).run
   end
 
   # Init a new worker instance
