@@ -64,7 +64,7 @@ class Fleiss::Worker
       end
     end
   rescue StandardError => e
-    handle_exception e, 'running cycle'
+    log_exception e, 'running cycle'
   end
 
   def perform(job)
@@ -84,10 +84,11 @@ class Fleiss::Worker
       finished ? job.finish(owner) : job.reschedule(owner)
     end
   rescue StandardError => e
-    handle_exception e, "processing job ##{job.id} (by thread #{thread_id})"
+    log_exception e, "processing job ##{job.id} (by thread #{thread_id})"
+    raise
   end
 
-  def handle_exception(err, intro)
+  def log_exception(err, intro)
     log(:error) do
       [
         "Worker #{uuid} error on #{intro}:",
