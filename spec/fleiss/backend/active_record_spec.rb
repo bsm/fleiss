@@ -125,7 +125,7 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
   end
 
   it 'reconnects' do
-    expect(::ActiveRecord::Base).to receive(:clear_active_connections!).once.and_return(nil)
+    expect(::ActiveRecord::Base).to receive(:clear_all_connections!).once.and_return(nil)
 
     expect do
       described_class.wrap_perform { raise ::ActiveRecord::StatementInvalid }
