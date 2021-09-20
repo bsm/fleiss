@@ -11,8 +11,6 @@ class Fleiss::Worker
   end
 
   # Init a new worker instance
-  # @param [ConnectionPool] disque client connection pool
-  # @param [Hash] options
   # @option [Array<String>] :queues queues to watch. Default: ["default"]
   # @option [Integer] :concurrency the number of concurrent pool. Default: 10
   # @option [Numeric] :wait_time maximum time (in seconds) to wait for jobs when retrieving next batch. Default: 1s.
