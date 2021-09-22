@@ -20,7 +20,7 @@ module Fleiss
           def wrap_perform(&block)
             connection_pool.with_connection(&block)
           rescue ::ActiveRecord::StatementInvalid
-            ::ActiveRecord::Base.clear_active_connections!
+            ::ActiveRecord::Base.clear_all_connections!
             raise
           end
 
