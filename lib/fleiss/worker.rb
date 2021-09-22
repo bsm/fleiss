@@ -60,9 +60,7 @@ class Fleiss::Worker
 
     batch.each do |job|
       @pool.post do
-        Fleiss.backend.wrap_perform { perform(job) }
-      rescue StandardError => e
-        log_exception e, "processing job ##{job.id} (by thread #{thread_id})"
+        perform(job)
       end
     end
   rescue StandardError => e
@@ -72,19 +70,24 @@ class Fleiss::Worker
   def perform(job)
     thread_id = Thread.current.object_id.to_s(16).reverse
     owner     = "#{uuid}/#{thread_id}"
-    return unless job.start(owner)
 
-    log(:info) { "Worker #{uuid} execute job ##{job.id} (by thread #{thread_id})" }
-    finished = false
-    begin
-      ActiveJob::Base.execute job.job_data
-      finished = true
-    rescue StandardError
-      finished = true
-      raise
-    ensure
-      finished ? job.finish(owner) : job.reschedule(owner)
+    Fleiss.backend.wrap_perform do
+      return unless job.start(owner)
+
+      log(:info) { "Worker #{uuid} execute job ##{job.id} (by thread #{thread_id})" }
+      finished = false
+      begin
+        ActiveJob::Base.execute job.job_data
+        finished = true
+      rescue StandardError
+        finished = true
+        raise
+      ensure
+        finished ? job.finish(owner) : job.reschedule(owner)
+      end
     end
+  rescue StandardError => e
+    log_exception e, "processing job ##{job.id} (by thread #{thread_id})"
   end
 
   def log_exception(err, intro)
