@@ -61,6 +61,8 @@ class Fleiss::Worker
     batch.each do |job|
       @pool.post do
         Fleiss.backend.wrap_perform { perform(job) }
+      rescue StandardError => e
+        log_exception e, "processing job ##{job.id} (by thread #{thread_id})"
       end
     end
   rescue StandardError => e
@@ -83,9 +85,6 @@ class Fleiss::Worker
     ensure
       finished ? job.finish(owner) : job.reschedule(owner)
     end
-  rescue StandardError => e
-    log_exception e, "processing job ##{job.id} (by thread #{thread_id})"
-    raise
   end
 
   def log_exception(err, intro)
