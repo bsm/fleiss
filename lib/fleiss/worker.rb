@@ -11,8 +11,6 @@ class Fleiss::Worker
   end
 
   # Init a new worker instance
-  # @param [ConnectionPool] disque client connection pool
-  # @param [Hash] options
   # @option [Array<String>] :queues queues to watch. Default: ["default"]
   # @option [Integer] :concurrency the number of concurrent pool. Default: 10
   # @option [Numeric] :wait_time maximum time (in seconds) to wait for jobs when retrieving next batch. Default: 1s.
@@ -62,16 +60,18 @@ class Fleiss::Worker
 
     batch.each do |job|
       @pool.post do
-        Fleiss.backend.wrap_perform { perform(job) }
+        thread_id = Thread.current.object_id.to_s(16).reverse
+        Fleiss.backend.wrap_perform { perform(job, thread_id) }
+      rescue StandardError => e
+        log_exception e, "processing job ##{job.id} (by thread #{thread_id})"
       end
     end
   rescue StandardError => e
-    handle_exception e, 'running cycle'
+    log_exception e, 'running cycle'
   end
 
-  def perform(job)
-    thread_id = Thread.current.object_id.to_s(16).reverse
-    owner     = "#{uuid}/#{thread_id}"
+  def perform(job, thread_id)
+    owner = "#{uuid}/#{thread_id}"
     return unless job.start(owner)
 
     log(:info) { "Worker #{uuid} execute job ##{job.id} (by thread #{thread_id})" }
@@ -85,11 +85,9 @@ class Fleiss::Worker
     ensure
       finished ? job.finish(owner) : job.reschedule(owner)
     end
-  rescue StandardError => e
-    handle_exception e, "processing job ##{job.id} (by thread #{thread_id})"
   end
 
-  def handle_exception(err, intro)
+  def log_exception(err, intro)
     log(:error) do
       [
         "Worker #{uuid} error on #{intro}:",
