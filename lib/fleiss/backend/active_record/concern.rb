@@ -4,6 +4,8 @@ module Fleiss
       module Concern
         extend ActiveSupport::Concern
 
+        DEFAULT_LOCK_TTL = ENV['FLEISS_LOCK_TTL']&.to_i # seconds
+
         included do
           scope :in_queue, ->(qs) { where(queue_name: Array.wrap(qs)) }
           scope :finished, -> { where.not(finished_at: nil) }
@@ -14,6 +16,15 @@ module Fleiss
           scope :started,      -> { where(arel_table[:started_at].not_eq(nil)) }
           scope :not_started,  -> { where(arel_table[:started_at].eq(nil)) }
           scope :scheduled,    ->(now = Time.zone.now) { where(arel_table[:scheduled_at].gt(now)) }
+
+          scope :lock_expired, lambda {|now = Time.zone.now, lock_ttl = DEFAULT_LOCK_TTL|
+            if lock_ttl
+              min_started_at = now - (1.1 * lock_ttl) # 10% threshold
+              where(finished_at: nil).where(arel_table[:started_at].lt(min_started_at)) # not yet finished and started at quite a while ago
+            else
+              none # do nothing unless explicitly configured
+            end
+          }
         end
 
         module ClassMethods
@@ -26,12 +37,14 @@ module Fleiss
 
           # @return [ActiveRecord::Relation] pending scope
           def pending(now = Time.zone.now)
-            not_finished
-              .not_expired(now)
-              .not_started
-              .where(arel_table[:scheduled_at].lteq(now))
-              .order(priority: :desc)
-              .order(scheduled_at: :asc)
+            pending = not_finished
+                      .not_expired(now)
+                      .not_started
+                      .where(arel_table[:scheduled_at].lteq(now))
+                      .order(priority: :desc)
+                      .order(scheduled_at: :asc)
+
+            pending.or(lock_expired(now, DEFAULT_LOCK_TTL))
           end
 
           # @return [ActiveRecord::Relation] in-progress scope

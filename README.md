@@ -60,3 +60,11 @@ Run the worker:
 ```ruby
 bundle exec fleiss -I . -r config/environment
 ```
+
+## Tweaks
+
+Worker heartbeat is not implemented, so in rare cases jobs can be stuck in "running" state if worker was KILL-ed (and not shut down gracefully). Or if worker is killed after it acquired the job and then DB connection was lost.
+
+To work around that, `FLEISS_LOCK_TTL` (seconds) ENV variable can be set. This should be larger than maximum expected job perform time.
+
+Jobs that are started but not finished in `FLEISS_LOCK_TTL` seconds can be picked up by other workers.

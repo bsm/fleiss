@@ -5,6 +5,7 @@ require 'fleiss'
 require 'fleiss/backend/active_record/migration'
 require 'active_job'
 require 'active_job/queue_adapters/fleiss_adapter'
+require 'active_support/testing/time_helpers'
 require 'fileutils'
 
 ActiveJob::Base.queue_adapter = :fleiss
@@ -44,6 +45,8 @@ class TestJob < ActiveJob::Base
 end
 
 RSpec.configure do |c|
+  c.include ActiveSupport::Testing::TimeHelpers
+
   c.after do
     TestJob.performed.clear
     Fleiss.backend.delete_all

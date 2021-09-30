@@ -47,15 +47,28 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
   end
 
   it 'scopes pending' do
-    j1 = TestJob.perform_later
-    expect(retrieve(j1).start('owner')).to be_truthy
-    expect(retrieve(j1).finish('owner')).to be_truthy
+    finished = TestJob.perform_later
+    expect(retrieve(finished).start('owner')).to be_truthy
+    expect(retrieve(finished).finish('owner')).to be_truthy
 
-    j2 = TestJob.perform_later
-    _j3 = TestJob.set(wait: 1.hour).perform_later
-    j4 = TestJob.set(priority: 2).perform_later
+    # jobs with expired locks are seen as pending:
+    lock_expired = travel_to(2.days.ago) do
+      stub_const('Fleiss::Backend::ActiveRecord::Concern::DEFAULT_LOCK_TTL', 1.day.seconds)
 
-    expect(described_class.pending.ids).to eq [j4.provider_job_id, j2.provider_job_id]
+      TestJob.perform_later.tap do |job|
+        expect(retrieve(job).start('owner')).to be_truthy
+      end
+    end
+
+    pending = TestJob.perform_later
+    pending_high_prio = TestJob.set(priority: 2).perform_later
+    _future = TestJob.set(wait: 1.hour).perform_later # not visible yet
+
+    expect(described_class.pending.ids).to eq [
+      pending_high_prio.provider_job_id,
+      lock_expired.provider_job_id,
+      pending.provider_job_id,
+    ]
   end
 
   it 'scopes in_progress' do
@@ -131,5 +144,35 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
       described_class.wrap_perform { raise ::ActiveRecord::StatementInvalid }
     end
       .to raise_error(::ActiveRecord::StatementInvalid) # re-raised anyway
+  end
+
+  context 'with internal helpers' do
+    it 'scopes lock_expired' do
+      # one not finished, but "recent" job:
+      travel_to(1.days.ago) { expect(retrieve(TestJob.perform_later).start('owner')).to be_truthy }
+
+      # not finished, and "old":
+      old = travel_to(2.days.ago) do
+        retrieve(TestJob.perform_later).tap do |rec|
+          expect(rec.start('owner')).to be_truthy
+        end
+      end
+
+      # one "old", but finished:
+      travel_to(2.days.ago) do
+        job = TestJob.perform_later
+        expect(retrieve(job).start('owner')).to be_truthy
+        expect(retrieve(job).finish('owner')).to be_truthy
+      end
+
+      # one "old", but not-started job (so not eligible for lock check)
+      travel_to(2.days.ago) { TestJob.perform_later }
+
+      # don't do anything unless TTL configured:
+      expect(described_class.lock_expired(Time.zone.now, nil)).not_to exist
+
+      expect(described_class.lock_expired(Time.zone.now, 1.day)).to contain_exactly(old)
+      expect(described_class.lock_expired(Time.zone.now, 2.day)).not_to exist
+    end
   end
 end
