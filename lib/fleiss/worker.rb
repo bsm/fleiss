@@ -74,16 +74,19 @@ class Fleiss::Worker
     owner = "#{uuid}/#{thread_id}"
     return unless job.start(owner)
 
-    log(:info) { "Worker #{uuid} execute job ##{job.id} (by thread #{thread_id})" }
-    finished = false
-    begin
-      ActiveJob::Base.execute job.job_data
-      finished = true
-    rescue StandardError
-      finished = true
-      raise
-    ensure
-      finished ? job.finish(owner) : job.reschedule(owner)
+    ActiveSupport::Notifications.instrument('fleiss.worker.perform', id: job.id, uuid: uuid, thread_id: thread_id) do |payload|
+      log(:info) { "Worker #{uuid} execute job ##{job.id} (by thread #{thread_id})" }
+      finished = false
+      begin
+        ActiveJob::Base.execute job.job_data
+        finished = true
+      rescue StandardError => e
+        payload[:error] = e
+        finished = true
+        raise
+      ensure
+        finished ? job.finish(owner) : job.reschedule(owner)
+      end
     end
   end
 
