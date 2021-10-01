@@ -14,6 +14,7 @@ module Fleiss
           scope :started,      -> { where(arel_table[:started_at].not_eq(nil)) }
           scope :not_started,  -> { where(arel_table[:started_at].eq(nil)) }
           scope :scheduled,    ->(now = Time.zone.now) { where(arel_table[:scheduled_at].gt(now)) }
+          scope :lock_expired, ->(now = Time.zone.now) { where(arel_table[:lock_expires_at].lt(now)) }
         end
 
         module ClassMethods
@@ -28,7 +29,7 @@ module Fleiss
           def pending(now = Time.zone.now)
             not_finished
               .not_expired(now)
-              .not_started
+              .not_started.or(lock_expired)
               .where(arel_table[:scheduled_at].lteq(now))
               .order(priority: :desc)
               .order(scheduled_at: :asc)
@@ -69,11 +70,15 @@ module Fleiss
         # @param [String] owner
         # @return [Boolean] true if job was started.
         def start(owner, now: Time.zone.now)
-          with_isolation do
+          started = with_isolation do
             self.class.pending(now)
                 .where(id: id)
-                .update_all(started_at: now, owner: owner)
+                .update_all(started_at: now, owner: owner, lock_expires_at: calc_next_lock_expires_at)
           end == 1
+
+          start_heartbeat(owner) if started
+
+          started
         rescue ::ActiveRecord::SerializationFailure
           false
         end
@@ -82,24 +87,32 @@ module Fleiss
         # @param [String] owner
         # @return [Boolean] true if successful.
         def finish(owner, now: Time.zone.now)
-          with_isolation do
+          finished = with_isolation do
             self.class
                 .in_progress(owner)
                 .where(id: id)
                 .update_all(finished_at: now)
           end == 1
+
+          stop_heartbeat if finished
+
+          finished
         rescue ::ActiveRecord::SerializationFailure
           false
         end
 
         # Reschedules the job to run again.
         def reschedule(owner, now: Time.zone.now)
-          with_isolation do
+          rescheduled = with_isolation do
             self.class
                 .in_progress(owner)
                 .where(id: id)
                 .update_all(started_at: nil, owner: nil, scheduled_at: now)
           end == 1
+
+          stop_heartbeat if rescheduled
+
+          rescheduled
         rescue ::ActiveRecord::SerializationFailure
           false
         end
@@ -113,6 +126,40 @@ module Fleiss
           else
             yield
           end
+        end
+
+        def start_heartbeat(owner)
+          raise "Multiple start_heartbeat for job id=#{id}" if @heartbeat # indicates that something is very wrong with worker
+
+          interval = try(:heartbeat_interval) || return
+
+          @heartbeat = Concurrent::TimerTask.new(execution_interval: interval) do |_task|
+            till_time = calc_next_lock_expires_at
+            break stop_heartbeat unless till_time # overthinking, shouldn't be possible
+
+            renew_lock(owner, till_time)
+          end
+          @heartbeat.execute
+        end
+
+        def stop_heartbeat
+          @heartbeat&.shutdown
+          @heartbeat = nil
+        end
+
+        def renew_lock(owner, till_time)
+          with_isolation do
+            self.class
+                .in_progress(owner)
+                .where(id: id)
+                .update_all(lock_expires_at: till_time)
+          end
+        end
+
+        def calc_next_lock_expires_at
+          interval = try(:heartbeat_interval) || return
+
+          Time.zone.now + (1.10 * interval) # 10% treshold just in case
         end
       end
     end
