@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name          = 'fleiss'
-  s.version       = '0.4.5'
+  s.version       = '0.5.0'
   s.authors       = ['Black Square Media Ltd']
   s.email         = ['info@blacksquaremedia.com']
   s.summary       = %(Minimialist background jobs backed by ActiveJob and ActiveRecord.)

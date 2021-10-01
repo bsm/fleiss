@@ -5,7 +5,34 @@
 
 Minimialist background jobs backed by ActiveJob and ActiveRecord.
 
+## WARNING
+
+When upgrading existing Fleiss installation to **0.5.0** (from any older version), include and run [migration](#migrate) once again to add new fields.
+
 ## Usage
+
+### Migrate
+
+Before running the worker, include this and migrate:
+
+```ruby
+# db/migrate/20182412102030_create_fleiss_jobs.rb
+require 'fleiss/backend/active_record/migration'
+
+class CreateFleissJobs < ActiveRecord::Migration[5.2]
+  def up
+    Fleiss::Backend::ActiveRecord::Migration.migrate(:up)
+  end
+
+  def down
+    Fleiss::Backend::ActiveRecord::Migration.migrate(:down)
+  end
+end
+```
+
+Migration is safe to be called many times, it detects changes from schema and applies only differences (or does nothing).
+
+### Use
 
 Define your active jobs, as usual:
 
@@ -65,7 +92,7 @@ class CreateFleissJobs < ActiveRecord::Migration[5.2]
 end
 ```
 
-Run the worker:
+### Run the worker
 
 ```ruby
 bundle exec fleiss -I . -r config/environment

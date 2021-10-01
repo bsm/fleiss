@@ -5,7 +5,9 @@ module Fleiss
     class ActiveRecord
       class Migration < ::ActiveRecord::Migration[6.0]
         def change
-          create_table :fleiss_jobs do |t|
+          table_name = :fleiss_jobs
+
+          create_table(table_name) do |t|
             t.string :queue_name, limit: 50, null: false
             t.integer :priority, limit: 2, null: false, default: 10
             t.text :payload, null: false
@@ -14,6 +16,7 @@ module Fleiss
             t.timestamp :finished_at
             t.timestamp :expires_at
             t.string :owner, limit: 100
+            t.timestamp :lock_expires_at
 
             t.index :queue_name
             t.index :priority
@@ -21,7 +24,10 @@ module Fleiss
             t.index :finished_at
             t.index :expires_at
             t.index :owner
-          end
+          end unless table_exists?(table_name)
+
+          add_column(table_name, :lock_expires_at, :timestamp) \
+            unless column_exists?(table_name, :lock_expires_at)
         end
       end
     end
