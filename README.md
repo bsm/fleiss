@@ -41,8 +41,7 @@ end
 Allow to subscribe on worker perform method and detect errors
 
 ```ruby
-ActiveSupport::Notifications.subscribe('fleiss.worker.perform') do |*args|
-  event = ActiveSupport::Notifications::Event.new(*args)
+ActiveSupport::Notifications.subscribe('fleiss.worker.perform') do |event|
   break unless event.payload.key?(:exception_object)
 
   Raven.capture_exception(event.payload[:exception_object])
