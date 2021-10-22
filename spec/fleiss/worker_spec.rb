@@ -18,7 +18,7 @@ RSpec.describe Fleiss::Worker do
 
   around do |example|
     callback = ->(*args) { notifications.push ActiveSupport::Notifications::Event.new(*args) }
-    ActiveSupport::Notifications.subscribed(callback, 'fleiss.worker.perform') do
+    ActiveSupport::Notifications.subscribed(callback, 'worker_perform.fleiss') do
       example.call
     end
   end
@@ -55,6 +55,7 @@ RSpec.describe Fleiss::Worker do
     expect(notifications.first.payload).to have_key(:id)
     expect(notifications.first.payload).to have_key(:uuid)
     expect(notifications.first.payload).to have_key(:thread_id)
+    expect(notifications.first.payload[:finished]).to be_truthy
     expect(notifications.first.payload[:exception_object]).to be_an_instance_of(RuntimeError)
     expect(notifications.first.payload[:exception_object].message).to eq('Failing')
   end
