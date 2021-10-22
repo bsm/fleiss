@@ -16,6 +16,13 @@ RSpec.describe Fleiss::Worker do
     runner.kill
   end
 
+  around do |example|
+    callback = ->(*args) { notifications.push ActiveSupport::Notifications::Event.new(*args) }
+    ActiveSupport::Notifications.subscribed(callback, 'worker_perform.fleiss') do
+      example.call
+    end
+  end
+
   def wait_for
     100.times do
       break if yield
@@ -43,5 +50,19 @@ RSpec.describe Fleiss::Worker do
     TestJob.perform_later('raise')
     wait_for { Fleiss.backend.not_finished.count.zero? }
     expect(Fleiss.backend.finished.count).to eq(1)
+
+    expect(notifications.size).to eq(1)
+    expect(notifications.first.payload).to have_key(:id)
+    expect(notifications.first.payload).to have_key(:uuid)
+    expect(notifications.first.payload).to have_key(:thread_id)
+    expect(notifications.first.payload[:finished]).to be_truthy
+    expect(notifications.first.payload[:exception_object]).to be_an_instance_of(RuntimeError)
+    expect(notifications.first.payload[:exception_object].message).to eq('Failing')
+  end
+
+  private
+
+  def notifications
+    @notifications ||= []
   end
 end

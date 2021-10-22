@@ -38,6 +38,16 @@ class ExpringJob < ActiveJob::Base
 end
 ```
 
+Allow to subscribe on worker perform method and detect errors
+
+```ruby
+ActiveSupport::Notifications.subscribe('worker_perform.fleiss') do |event|
+  break unless event.payload.key?(:exception_object)
+
+  Raven.capture_exception(event.payload[:exception_object])
+end
+```
+
 Include the data migration:
 
 ```ruby

@@ -76,7 +76,8 @@ class Fleiss::Worker
 
     log(:info) { "Worker #{uuid} execute job ##{job.id} (by thread #{thread_id})" }
     finished = false
-    begin
+
+    ActiveSupport::Notifications.instrument('worker_perform.fleiss', id: job.id, uuid: uuid, thread_id: thread_id) do |payload|
       ActiveJob::Base.execute job.job_data
       finished = true
     rescue StandardError
@@ -84,6 +85,7 @@ class Fleiss::Worker
       raise
     ensure
       finished ? job.finish(owner) : job.reschedule(owner)
+      payload[:finished] = finished
     end
   end
 
