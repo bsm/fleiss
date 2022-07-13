@@ -16,7 +16,7 @@ tmpdir = File.expand_path('./tmp', __dir__)
 FileUtils.rm_rf tmpdir
 FileUtils.mkdir_p tmpdir
 
-database_url = ENV['DATABASE_URL'] || "sqlite3://#{tmpdir}/fleiss-test.sqlite3"
+database_url = ENV.fetch('DATABASE_URL') { "sqlite3://#{tmpdir}/fleiss-test.sqlite3" }
 ActiveRecord::Base.configurations = { 'test' => { 'url' => database_url, 'pool' => 20 } }
 
 ActiveRecord::Base.establish_connection :test

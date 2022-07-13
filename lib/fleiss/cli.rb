@@ -31,7 +31,7 @@ module Fleiss
       return unless opts[:config]
 
       # Load config file
-      conf = YAML.safe_load(ERB.new(IO.read(opts[:config])).result)
+      conf = YAML.safe_load(ERB.new(File.read(opts[:config])).result)
       raise ArgumentError, "File in #{opts[:config]} does not contain a valid configuration" unless conf.is_a?(Hash)
 
       conf.each do |key, value|
