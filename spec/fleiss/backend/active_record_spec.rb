@@ -124,12 +124,13 @@ RSpec.describe Fleiss::Backend::ActiveRecord do
     expect(rec.scheduled_at).to be_within(2.seconds).of(Time.zone.now)
   end
 
-  it 'reconnects' do
-    expect(::ActiveRecord::Base).to receive(:clear_all_connections!).once.and_return(nil)
-
+  it 'reconnects on errors' do
     expect do
-      described_class.wrap_perform { raise ::ActiveRecord::StatementInvalid }
+      expect do
+        described_class.wrap_perform { raise ::ActiveRecord::StatementInvalid }
+      end
+        .to raise_error(::ActiveRecord::StatementInvalid) # re-raised anyway
     end
-      .to raise_error(::ActiveRecord::StatementInvalid) # re-raised anyway
+      .to change { ::ActiveRecord::Base.connection_pool.connections.size }.to(0)
   end
 end

@@ -18,9 +18,11 @@ module Fleiss
 
         module ClassMethods
           def wrap_perform(&block)
-            connection_pool.with_connection(&block)
+            pool = connection_pool
+            pool.with_connection(&block)
           rescue ::ActiveRecord::StatementInvalid
-            ::ActiveRecord::Base.clear_all_connections!
+            pool&.release_connection
+            pool&.flush!
             raise
           end
 
